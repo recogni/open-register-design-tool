@@ -17,6 +17,7 @@ fieldstruct fs1 {
 // define fieldstruct w/ field gaps
 fieldstruct fs2 {
     field { sw=rw; hw=rw; we; } fld1[3:0] = 4'd0;
+    field {} reserved_0[7:4];
     field { sw=rw; hw=r; } fld2[8:8];
 };
 

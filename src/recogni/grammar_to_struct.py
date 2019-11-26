@@ -13,9 +13,12 @@
     TODO: ???
 """
 import sys
+import json
+from antlr4 import *
+
+# HACK: add `system_rdl` to python path to allow lexer, parser to be module-ized
 sys.path.append("system_rdl")
 
-from antlr4 import *
 from system_rdl.SystemRDLLexer import SystemRDLLexer
 from system_rdl.SystemRDLParser import SystemRDLParser
 from system_rdl.SystemRDLListener import SystemRDLListener
@@ -98,6 +101,7 @@ class CustomListener(SystemRDLListener):
     _enum_entry = None
     _struct = None
     _field = None
+    _field_prop_k = None
 
     #
     #   Ctors
@@ -222,16 +226,23 @@ class CustomListener(SystemRDLListener):
 
 
     #
-    #   Other helpers
-    # 
+    #   Field properties.
+    #
+    def enterProperty(self, ctx:SystemRDLParser.StrContext):
+        prop = ctx.getText()
+        if self.context & CTXT_IN_COMPONENT_FIELD:
+            self._field_prop_k = prop
+        else:
+            warn("property (%s) in unrecognized context" % (prop))
 
-    def dump_parsed(self):
-        print("Enums:")
-        for e in self.enums:
-            print(e)
-        print("Structs:")
-        for s in self.structs:
-            print(s)
+    def enterProperty_assign_rhs(self, ctx:SystemRDLParser.StrContext):
+        rhs = ctx.getText()
+        if self.context & CTXT_IN_COMPONENT_FIELD and self._field_prop_k != None:
+            self._field[self._field_prop_k] = rhs
+            self._field_prop_k = None
+        else:
+            warn("found property rhs without key")
+            
 
 ################################################################################
 
@@ -247,9 +258,10 @@ def main(argv):
     walker = ParseTreeWalker()
     walker.walk(printer, tree)
 
-    printer.dump_parsed()
+    print(json.dumps(printer.enums, sort_keys=True, indent=2))
+    print(json.dumps(printer.structs, sort_keys=True, indent=2))
+
  
 
 if __name__ == '__main__':
     main(sys.argv)
-    
