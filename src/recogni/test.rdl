@@ -1,0 +1,35 @@
+// Enum example
+enum cdor_scsw_op {
+    SCSW_NOP,
+    SCSW_DUP,
+    SCSW_INS_ZEROES_EVEN,
+    SCSW_INS_ZEROES_ODD,
+    SCSW_EVENODD_INTEG,
+};
+
+// define simple packed fieldstruct
+fieldstruct fs1 {
+    field { sw=rw; hw=rw; we; } fld1[4] = 4'd0;
+    field { sw=rw; hw=r; } fld2;
+};
+
+
+// define fieldstruct w/ field gaps
+fieldstruct fs2 {
+    field { sw=rw; hw=rw; we; } fld1[3:0] = 4'd0;
+    field { sw=rw; hw=r; } fld2[8:8];
+};
+
+// define hierarchical fieldstruct
+fieldstruct hier_fs {
+    int fs1;
+    field { sw=rw; hw=r; } fld1;
+    fs2 fs2;
+};
+
+// define fieldstruct w/ explicit width
+fieldstruct fs3 {
+   fieldstructwidth = 8;
+   field { sw=rw; hw=rw; we; } fld1[4] = 4'd0;
+   field { sw=rw; hw=r; } fld2;
+};
