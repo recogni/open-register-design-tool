@@ -1,12 +1,3 @@
-// Enum example
-enum cdor_scsw_op {
-    SCSW_NOP,
-    SCSW_DUP,
-    SCSW_INS_ZEROES_EVEN,
-    SCSW_INS_ZEROES_ODD,
-    SCSW_EVENODD_INTEG,
-};
-
 // define simple packed fieldstruct
 fieldstruct fs1 {
     field { sw=rw; hw=rw; we; } fld1[4] = 4'd0;
