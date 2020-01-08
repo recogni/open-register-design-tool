@@ -1888,7 +1888,8 @@ public class SystemVerilogDecodeModule extends SystemVerilogModule {
 		String ringCmdDataName = getSigName(isPrimary, prefix + "_cmd_data");                      	
 		prefix = (topRegProperties == null)? "r" + ringWidth : "r2d_" + topRegProperties.getBaseName();
 		String ringResValidName = getSigName(isPrimary, prefix + "_res_valid");                      
-		String ringResDataName = getSigName(isPrimary, prefix + "_res_data");                      	
+		String ringResDataName = getSigName(isPrimary, prefix + "_res_data"); 
+		String ringResRdyName = getSigName(isPrimary, prefix + "_res_rdy");                     	
 		// set internal names
 		String sigBlockBaseAddr = getSigName(isPrimary, "block_base_address");
 		String ringStateName = getSigName(isPrimary, "r" + ringWidth + "_state");                      
@@ -1935,7 +1936,10 @@ public class SystemVerilogDecodeModule extends SystemVerilogModule {
 		// outputs  
 		this.addSimpleScalarTo(SystemVerilogBuilder.PIO, ringResValidName);     // stays high while all res cntl/data xferred
 		this.addSimpleVectorTo(SystemVerilogBuilder.PIO, ringResDataName, 0, ringWidth);     
+		// output rdy
+		this.addSimpleScalarFrom(SystemVerilogBuilder.PIO, ringResRdyName);
 		
+
 		// create the block base address
 		this.addVectorWire(sigBlockBaseAddr, 0, ExtParameters.getLeafAddressSize());  //  base address of block 
 		// set base address for his decoder - if a secondary interface, use specified alternate base address if specified
@@ -2017,6 +2021,7 @@ public class SystemVerilogDecodeModule extends SystemVerilogModule {
         // ring res outputs will be set in sm (after res delay regs)
 		this.addScalarWire(ringResValidName);  
 		this.addVectorWire(ringResDataName, 0, ringWidth); 
+		//this.addScalarWire(ringResRdyName);
 
 		// create out fifo signals  
 		int outFifoSize = maxAddrXferCount + 1;  // max depth is addr words plus 1 cntl word
@@ -3606,7 +3611,8 @@ public class SystemVerilogDecodeModule extends SystemVerilogModule {
 		
 		String ringResValidName = "r2d_" + addrInstProperties.getBaseName() + "_res_valid";                      
 		String ringResDataName = "r2d_" + addrInstProperties.getBaseName() + "_res_data";                      
-		
+		String ringResRdyName = "d2r_" + addrInstProperties.getBaseName() + "_res_rdy";
+
 		//  outputs
 		this.addSimpleScalarTo(SystemVerilogBuilder.HW, ringCmdValidName);     // stays high while all cmd addr/data/cntl xferred 
 		this.addSimpleVectorTo(SystemVerilogBuilder.HW, ringCmdDataName, 0, ringWidth);  
@@ -3614,6 +3620,8 @@ public class SystemVerilogDecodeModule extends SystemVerilogModule {
 		// inputs  
 		this.addSimpleScalarFrom(SystemVerilogBuilder.HW, ringResValidName);     // stays high while all res cntl/data xferred
 		this.addSimpleVectorFrom(SystemVerilogBuilder.HW, ringResDataName, 0, ringWidth);     
+		this.addSimpleScalarTo(SystemVerilogBuilder.HW, ringResRdyName);
+
 
         // set field info according to ringWidth
 		//                addr bits      offset         data size bits   r/w bit   ack/nack
