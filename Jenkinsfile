@@ -51,6 +51,7 @@ pipeline {
                            apt-get update
                            apt-get install -y gradle
                            cd /workspace
+                           umask 0
                            gradle shadowJar
                            """)
                     }
