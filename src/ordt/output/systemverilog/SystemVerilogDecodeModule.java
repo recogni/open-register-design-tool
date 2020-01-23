@@ -1888,7 +1888,8 @@ public class SystemVerilogDecodeModule extends SystemVerilogModule {
 		String ringCmdDataName = getSigName(isPrimary, prefix + "_cmd_data");                      	
 		prefix = (topRegProperties == null)? "r" + ringWidth : "r2d_" + topRegProperties.getBaseName();
 		String ringResValidName = getSigName(isPrimary, prefix + "_res_valid");                      
-		String ringResDataName = getSigName(isPrimary, prefix + "_res_data");                      	
+		String ringResDataName = getSigName(isPrimary, prefix + "_res_data"); 
+		String ringResRdyName = getSigName(isPrimary, prefix + "_res_rdy");                     	
 		// set internal names
 		String sigBlockBaseAddr = getSigName(isPrimary, "block_base_address");
 		String ringStateName = getSigName(isPrimary, "r" + ringWidth + "_state");                      
@@ -1935,7 +1936,10 @@ public class SystemVerilogDecodeModule extends SystemVerilogModule {
 		// outputs  
 		this.addSimpleScalarTo(SystemVerilogBuilder.PIO, ringResValidName);     // stays high while all res cntl/data xferred
 		this.addSimpleVectorTo(SystemVerilogBuilder.PIO, ringResDataName, 0, ringWidth);     
+		// output rdy
+		this.addSimpleScalarFrom(SystemVerilogBuilder.PIO, ringResRdyName);
 		
+
 		// create the block base address
 		this.addVectorWire(sigBlockBaseAddr, 0, ExtParameters.getLeafAddressSize());  //  base address of block 
 		// set base address for his decoder - if a secondary interface, use specified alternate base address if specified
@@ -2017,6 +2021,7 @@ public class SystemVerilogDecodeModule extends SystemVerilogModule {
         // ring res outputs will be set in sm (after res delay regs)
 		this.addScalarWire(ringResValidName);  
 		this.addVectorWire(ringResDataName, 0, ringWidth); 
+		//this.addScalarWire(ringResRdyName);
 
 		// create out fifo signals  
 		int outFifoSize = maxAddrXferCount + 1;  // max depth is addr words plus 1 cntl word
@@ -2296,12 +2301,25 @@ public class SystemVerilogDecodeModule extends SystemVerilogModule {
 		this.addCombinAssign(groupName,   "      end"); 
 		this.addCombinAssign(groupName,   "    end");
 		
+		String finalRetCntStr = getSerialMaxDataCountStr(useTransactionSize, transactionsInWord, pioInterfaceRetTransactionSizeName);
+
 		// RES_READ - send read data
-		this.addCombinAssign(groupName,     "  " + RES_READ + ": begin  // RES_READ");  
+		this.addCombinAssign(groupName,     "  " + RES_READ + ": begin  // RES_READ"); 
 		this.addCombinAssign(groupName,     "      " + resValidDlyName[0] + " =  1'b1;");  // res is valid
+
+		this.addCombinAssign(groupName,     "      if ( !" +  ringResRdyName + ") begin ");
+		this.addCombinAssign(groupName,     "        " + ringDataCntNextName + " = " + ringDataCntName + ";" );
+
+		this.addCombinAssign(groupName,     "      end else begin" );
+		this.addCombinAssign(groupName,     "      if (" + ringDataCntName + " == " + finalRetCntStr + ") " + ringStateNextName + " = " + IDLE + ";");
+
 		if (useDataCounter) {
+				// if final count we're done
+	
 			//  bump the data count
-			this.addCombinAssign(groupName,     "      " + ringDataCntNextName + " = " + ringDataCntName + " + " + maxDataXferCountBits + "'b1;");
+			this.addCombinAssign(groupName, "        " + ringDataCntNextName + " = " + ringDataCntName + " + " + maxDataXferCountBits + "'b1;");
+			this.addCombinAssign(groupName, "      end");
+
 			// send the data slice while 
 			for (int idx=0; idx<maxDataXferCount; idx++) {
 				prefix = (idx == 0)? "" : "else ";
@@ -2309,13 +2327,10 @@ public class SystemVerilogDecodeModule extends SystemVerilogModule {
 				this.addCombinAssign(groupName, "        " + resDataDlyName[0] + " = " + ringRdCaptureName + SystemVerilogSignal.genRefArrayString(ringWidth*idx, ringWidth) + ";");
 			}
 
-			// if final count we're done
-			String finalRetCntStr = getSerialMaxDataCountStr(useTransactionSize, transactionsInWord, pioInterfaceRetTransactionSizeName);
-			this.addCombinAssign(groupName, "      if (" + ringDataCntName + " == " + finalRetCntStr + ") " + ringStateNextName + " = " + IDLE + ";");
 		}
 		else {
-			this.addCombinAssign(groupName, "      " + resDataDlyName[0] + " = " + ringRdCaptureName + SystemVerilogSignal.genRefArrayString(0, ringWidth) + ";");
-			this.addCombinAssign(groupName, "      " + ringStateNextName + " = " + IDLE + ";");	
+			this.addCombinAssign(groupName, "        " + resDataDlyName[0] + " = " + ringRdCaptureName + SystemVerilogSignal.genRefArrayString(0, ringWidth) + ";");
+			this.addCombinAssign(groupName, "        " + ringStateNextName + " = " + IDLE + ";");	
 		}
 		this.addCombinAssign(groupName,     "    end"); 
 		
@@ -3606,7 +3621,8 @@ public class SystemVerilogDecodeModule extends SystemVerilogModule {
 		
 		String ringResValidName = "r2d_" + addrInstProperties.getBaseName() + "_res_valid";                      
 		String ringResDataName = "r2d_" + addrInstProperties.getBaseName() + "_res_data";                      
-		
+		String ringResRdyName = "d2r_" + addrInstProperties.getBaseName() + "_res_rdy";
+
 		//  outputs
 		this.addSimpleScalarTo(SystemVerilogBuilder.HW, ringCmdValidName);     // stays high while all cmd addr/data/cntl xferred 
 		this.addSimpleVectorTo(SystemVerilogBuilder.HW, ringCmdDataName, 0, ringWidth);  
@@ -3614,6 +3630,8 @@ public class SystemVerilogDecodeModule extends SystemVerilogModule {
 		// inputs  
 		this.addSimpleScalarFrom(SystemVerilogBuilder.HW, ringResValidName);     // stays high while all res cntl/data xferred
 		this.addSimpleVectorFrom(SystemVerilogBuilder.HW, ringResDataName, 0, ringWidth);     
+		this.addSimpleScalarTo(SystemVerilogBuilder.HW, ringResRdyName);
+
 
         // set field info according to ringWidth
 		//                addr bits      offset         data size bits   r/w bit   ack/nack
