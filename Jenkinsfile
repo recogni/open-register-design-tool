@@ -58,6 +58,34 @@ pipeline {
                 }
             }
         }
+
+        stage("Release") {
+            when {
+                tag pattern: "^v\\d+\\.\\d+\\.\\d+.*\$",
+                comparator: "REGEXP"
+            }
+            steps {
+                script {
+                    activeStageName = env.STAGE_NAME
+
+                    withCredentials(bindings: [usernamePassword(credentialsId: 'github-recogni-builder',
+                                                                usernameVariable: 'GITHUB_CLIENT_ID',
+                                                                passwordVariable: 'GITHUB_CLIENT_SECRET')]) {
+                    docker.image("ubuntu:18.04").inside("-u 0:0 --volume ${env.WORKSPACE}:/workspace") {
+                        sh('''#!/bin/bash -xe
+                            apt-get update
+                            apt-get install -y --no-install-recommends python3-pip python3-pkg-resources jq
+                            pip3 install httpie
+                            cd /workspace
+                            release_id=$(http --ignore-stdin -a ${GITHUB_CLIENT_ID}:${GITHUB_CLIENT_SECRET} "https://api.github.com/repos/${GIT_REPOSITORY}/releases" | jq -r "map(select(.tag_name == \\"${TAG_NAME}\\")) | .[] | .id")
+                            [ ! -z "${release_id}" ]
+                            http -a ${GITHUB_CLIENT_ID}:${GITHUB_CLIENT_SECRET} "https://uploads.github.com/repos/${GIT_REPOSITORY}/releases/${release_id}/assets?name=Ordt.jar" Content-Type:application/octet-stream Expect:100-continue <build/libs/*.jar
+                            ''')
+                        }
+                    }
+                }
+            }
+        }
     }
 
     post {
