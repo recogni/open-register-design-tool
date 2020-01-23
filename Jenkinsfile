@@ -79,7 +79,7 @@ pipeline {
                             cd /workspace
                             release_id=$(http --ignore-stdin -a ${GITHUB_CLIENT_ID}:${GITHUB_CLIENT_SECRET} "https://api.github.com/repos/${GIT_REPOSITORY}/releases" | jq -r "map(select(.tag_name == \\"${TAG_NAME}\\")) | .[] | .id")
                             [ ! -z "${release_id}" ]
-                            http -a ${GITHUB_CLIENT_ID}:${GITHUB_CLIENT_SECRET} "https://uploads.github.com/repos/${GIT_REPOSITORY}/releases/${release_id}/assets?name=Ordt.jar" Content-Type:application/octet-stream Expect:100-continue <build/libs/*.jar
+                            http -a ${GITHUB_CLIENT_ID}:${GITHUB_CLIENT_SECRET} "https://uploads.github.com/repos/${GIT_REPOSITORY}/releases/${release_id}/assets?name=Ordt-${TAG_NAME}.jar" Content-Type:application/octet-stream Expect:100-continue <build/libs/*.jar
                             ''')
                         }
                     }
