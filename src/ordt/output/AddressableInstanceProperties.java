@@ -183,7 +183,7 @@ public abstract class AddressableInstanceProperties extends InstanceProperties {
 
 	/** return index range for a group of replicated external registers */
 	public String getExtAddressArrayString() {
-		if (getExtAddressWidth() > 1) return " [" + (getExtLowBit() + getExtAddressWidth() - 1) + ":" + getExtLowBit() + "] ";
+		if (getExtAddressWidth() >= 1) return " [" + (getExtLowBit() + getExtAddressWidth() - 1) + ":" + getExtLowBit() + "] ";
 		else return "";
 	}
 
