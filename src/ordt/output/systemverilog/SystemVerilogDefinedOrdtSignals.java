@@ -33,18 +33,22 @@ public class SystemVerilogDefinedOrdtSignals extends SystemVerilogDefinedSignalM
 		}
 	};
 	
+	// hwload inputs are a special case, not tied to hierarchy
+	public static final int MAX_HWLOAD_INPUTS = 8;
+	
 	// define io locations
 	public static final Integer NONE = SystemVerilogLocationMap.getId("NONE");
 	public static final Integer HW = SystemVerilogLocationMap.add("HW");
 	public static final Integer LOGIC = SystemVerilogLocationMap.add("LOGIC");
 	public static final Integer DECODE = SystemVerilogLocationMap.add("DECODE");
+	public static final Integer DECODE_PIO_IF = SystemVerilogLocationMap.add("DECODE_PIO_IF");
 	public static final Integer PIO = SystemVerilogLocationMap.add("PIO");
 	public static final Integer WRAPPER = SystemVerilogLocationMap.add("WRAPPER");
 
 	private static HashMap<String, DefSignalType> rhsSigSet = initRhsSignals();  // set of signal types allowed in rhs assign by deref
 		
 	/** load the defined signal map */
-	protected static void initDefinedSignalMap() {
+	public static void initDefinedSignalMap() {
         clearMap();
 		
 		addDefinedSignal(DefSignalType.FIELD, new SystemVerilogDefinedSignal(LOGIC, LOGIC, "rg_", null, "comp_type", "FIELD"));
@@ -137,7 +141,7 @@ public class SystemVerilogDefinedOrdtSignals extends SystemVerilogDefinedSignalM
 	}
 	
 	/** return true is specified signal deref corresponds to a valid rhs signal */
-	public static boolean isValidRhsDeRef(String deRef) {
+	private static boolean isValidRhsDeRef(String deRef) {
 		return rhsSigSet.containsKey(deRef);
 	}
 

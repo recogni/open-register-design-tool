@@ -42,6 +42,8 @@ public class FieldProperties extends InstanceProperties {
 	private boolean hasHwSet = false;
 	private boolean hasHwClr = false;
 	
+	private HashMap<Integer, RegNumber> hwLoadValues = new HashMap<Integer, RegNumber>();  // map of hwload values
+
 	private boolean hasWriteEnableH = false;
 	private boolean hasWriteEnableL = false;
 	
@@ -83,6 +85,7 @@ public class FieldProperties extends InstanceProperties {
 	
 	// interrupt info
 	private boolean isInterrupt = false;   // field is set by interrupt input
+	private boolean isRtlOnlyInterrupt = false;   // rdl interrupt is being used to provide rtl behavior but is not a functional interrupt
 		
 	public enum IntrType {
 		LEVEL(0), POSEDGE(1), NEGEDGE(2), BOTHEDGE(3);
@@ -146,7 +149,11 @@ public class FieldProperties extends InstanceProperties {
 		// now extract from the combined instance properties
 		
 		// category property
-		if (pList.hasProperty("sub_category")) setSubCategory(pList.getProperty("sub_category")); 
+		if (pList.hasProperty("sub_category")) {
+			String subcatStr = pList.getProperty("sub_category");
+			if (subcatStr.contains("RTL_ONLY")) setRtlOnlyInterrupt(true); // RTL_ONLY is a special case, so flag and exit if found
+			else setSubCategory(subcatStr); 
+		}
 		//if (getId().equals("str")) System.out.println("--- FieldProperties for str:" + this.getSubCategory());
 		
 		// now use pList to extract info
@@ -242,6 +249,20 @@ public class FieldProperties extends InstanceProperties {
 			if (!pList.hasBooleanProperty("hwclr"))
 				setRef(RhsRefType.HW_CLR, pList.getProperty("hwclr"), pList.getDepth("hwclr"));
 		}
+		
+		// hwload property(s)
+		for (int loadidx = -1; loadidx<SystemVerilogDefinedOrdtSignals.MAX_HWLOAD_INPUTS ; loadidx++) {
+			String hwloadStr = (loadidx<0)? "hwload" : "hwload(" + loadidx + ")";
+		    if (pList.hasProperty(hwloadStr)) {
+				//System.out.println("fieldProperties extractProperties: found " + hwloadStr + " in inst=" + this.getInstancePath() + ", val=" + pList.getProperty(hwloadStr));
+				RegNumber regNum = new RegNumber(pList.getProperty(hwloadStr));
+				if (regNum.isDefined()) {
+					if (!regNum.isDefinedVector()) regNum.setVectorLen(getFieldWidth());
+					int idx = (loadidx<0)? 0 : loadidx;
+					hwLoadValues.put(idx, regNum);   // assignment of load value
+				}
+		    }
+        }
 		
 		// set test mask values
 		if (pList.hasProperty("donttest")) {
@@ -697,7 +718,7 @@ public class FieldProperties extends InstanceProperties {
 	
 	/** returns true if field has a hw write control signal (we, wel, hwset, hwclr etc) */
 	public boolean hasHwWriteControl() {
-		return hasWriteEnableL() || hasWriteEnableH() || hasHwSet() || hasHwClr();
+		return hasWriteEnableL() || hasWriteEnableH() || hasHwSet() || hasHwClr() || hasHwLoadValues();
 	}
 	
 	/** true if hw writes or affects the field value */
@@ -741,6 +762,23 @@ public class FieldProperties extends InstanceProperties {
 
 	public void setHasHwClr(boolean hasHwClr) {
 		this.hasHwClr = hasHwClr;
+	}
+	
+	/** return true the field has any hwload values */ 
+	public boolean hasHwLoadValues() {
+		for (int lidx=0; lidx<SystemVerilogDefinedOrdtSignals.MAX_HWLOAD_INPUTS; lidx++)
+			if (hasHwLoadValue(lidx)) return true;
+		return false;
+	}
+	
+	/** return the field hwload value for this index */ 
+	public boolean hasHwLoadValue(int idx) {
+		return hwLoadValues.containsKey(idx);
+	}
+
+	/** return true if a field hwload value exists for this index */ 
+	public RegNumber getHwLoadValue(int idx) {
+		return hwLoadValues.get(idx);
 	}
 
 	/** returns true if field has an active high hw write enable */
@@ -1159,6 +1197,19 @@ public class FieldProperties extends InstanceProperties {
 		this.isInterrupt = isInterrupt;
 	}
 
+	public boolean isRtlOnlyInterrupt() {
+		return isRtlOnlyInterrupt;
+	}
+
+	private void setRtlOnlyInterrupt(boolean isRtlOnlyInterrupt) {
+		this.isRtlOnlyInterrupt = isRtlOnlyInterrupt;
+	}
+
+	/** return true if field is an rdl interrupt that is used as a functional interrupt */
+	public boolean isFunctionalInterrupt() {
+		return isInterrupt() && !isRtlOnlyInterrupt();
+	}
+
 	/** get intrType
 	 *  @return the intrType
 	 */
@@ -1274,6 +1325,8 @@ public class FieldProperties extends InstanceProperties {
 		result = prime * result + ((fieldWidth == null) ? 0 : fieldWidth.hashCode());
 		result = prime * result + (hasHwClr ? 1231 : 1237);
 		result = prime * result + (hasHwSet ? 1231 : 1237);
+		for (int lidx=0; lidx<SystemVerilogDefinedOrdtSignals.MAX_HWLOAD_INPUTS; lidx++)
+			if (hasHwLoadValue(lidx)) result = prime * result + hwLoadValues.get(lidx).hashCode();
 		result = prime * result + (hasOverflow ? 1231 : 1237);
 		result = prime * result + (hasSaturateOutputs ? 1231 : 1237);
 		result = prime * result + (hasSwAcc ? 1231 : 1237);
@@ -1376,6 +1429,12 @@ public class FieldProperties extends InstanceProperties {
 			return false;
 		if (hasHwSet != other.hasHwSet)
 			return false;
+		for (int lidx=0; lidx<SystemVerilogDefinedOrdtSignals.MAX_HWLOAD_INPUTS; lidx++)
+			if (hasHwLoadValue(lidx)) {
+				if (!other.hasHwLoadValue(lidx)) return false;
+				else if (!getHwLoadValue(lidx).equals(other.getHwLoadValue(lidx))) return false;
+			}
+			else if (other.hasHwLoadValue(lidx)) return false;
 		if (hasOverflow != other.hasOverflow)
 			return false;
 		if (hasSaturateOutputs != other.hasSaturateOutputs)

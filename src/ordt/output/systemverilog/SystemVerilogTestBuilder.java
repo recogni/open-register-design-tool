@@ -21,6 +21,7 @@ import ordt.output.systemverilog.common.RemapRuleList.RemapRuleType;
 import ordt.output.systemverilog.common.io.SystemVerilogIOElement;
 import ordt.output.systemverilog.common.io.SystemVerilogIOSignal;
 import ordt.output.systemverilog.common.io.SystemVerilogIOSignalList;
+import ordt.output.systemverilog.decode.SystemVerilogDecodeModule;
 import ordt.output.systemverilog.common.SystemVerilogModule;
 import ordt.output.systemverilog.common.SystemVerilogSignal;
 import ordt.parameters.ExtParameters;
@@ -378,7 +379,7 @@ public class SystemVerilogTestBuilder extends SystemVerilogBuilder {
 		   	benchtop.addStatement("always @(*)");
 		   	benchtop.addStatement("   gclk = CLK & delayed_gclk_enable;");
 		   	benchtop.addStatement("always @(posedge CLK)");
-		   	benchtop.addStatement("   delayed_gclk_enable <= #1 gclk_enable;");
+		   	benchtop.addStatement("   delayed_gclk_enable <= " + ExtParameters.sysVerSequentialAssignDelayString() + "gclk_enable;");
 		}
 		else {
 		   	// generate clocks

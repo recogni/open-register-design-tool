@@ -21,6 +21,7 @@ ext_parm_defs
     | bench_out_defs
     | xml_out_defs
  //   | cppmod_out_defs
+    | pydrvmod_out_defs
     | model_annotation
     )*
   ;
@@ -118,8 +119,8 @@ ext_parm_defs
  systemverilog_out_parm_assign
    : 'leaf_address_size' EQ NUM
    | 'root_has_leaf_interface' EQ bool 
-   | 'root_decoder_interface' EQ ('leaf' | 'parallel' | 'parallel_pulsed' | 'serial8' | 'ring8' | 'ring16' | 'ring32') 
-   | 'secondary_decoder_interface' EQ ('none' | 'leaf' | 'parallel' | 'parallel_pulsed' | 'serial8' | 'ring8' | 'ring16' | 'ring32' | 'engine1') 
+   | 'root_decoder_interface' EQ ('leaf' | 'parallel' | 'parallel_pulsed' | 'serial8' | 'ring8' | 'ring16' | 'ring32' | 'spi_PIO') 
+   | 'secondary_decoder_interface' EQ ('none' | 'leaf' | 'parallel' | 'parallel_pulsed' | 'serial8' | 'ring8' | 'ring16' | 'ring32' | 'engine1' | 'spi_PIO') 
    | 'secondary_base_address' EQ NUM 
    | 'secondary_low_address' EQ NUM 
    | 'secondary_high_address' EQ NUM 
@@ -151,6 +152,8 @@ ext_parm_defs
    | 'use_global_dv_bind_controls' EQ bool 
    | 'include_addr_monitor' EQ bool 
    | 'generate_iwrap_xform_modules' EQ bool 
+   | 'include_sequential_assign_delays' EQ bool
+   | 'reset_all_outputs' EQ bool
    ;
    
  systemverilog_wrapper_info
@@ -248,6 +251,18 @@ ext_parm_defs
    | 'set_full_model' EQ STR
    ;
 */
+
+// ------------ pydrvmod_out_defs
+ pydrvmod_out_defs
+   : 'output' 'pydrvmod'
+     LBRACE
+     (pydrvmod_out_parm_assign)*
+     RBRACE
+   ;  
+   
+ pydrvmod_out_parm_assign
+   : 'default_tag_name' EQ STR
+   ;
 
 // ------------ model_annotation
  model_annotation
@@ -401,9 +416,15 @@ ext_parm_defs
   | 'use_struct'   // added
 
   | 'cppmod_prune'   // added
+
+  | hwload_property   // added
   ;  
   
 // ------------
+
+hwload_property
+  : 'hwload' ( LPAREN NUM RPAREN )?
+  ;
    
 bool
   : ('true' | 'false')
@@ -457,6 +478,8 @@ STR
     '"' // "
   ;
 
+LPAREN : '(' ;
+RPAREN : ')' ;
 LBRACE : '{' ;
 RBRACE : '}' ;
 EQ     : '=' ;

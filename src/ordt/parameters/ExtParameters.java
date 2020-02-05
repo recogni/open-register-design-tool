@@ -46,7 +46,7 @@ public class ExtParameters extends ExtParmsBaseListener  {
 	
 	// enums for non-standard parameter types
 	public enum SVBlockSelectModes { INTERNAL, EXTERNAL, ALWAYS } 
-	public enum SVDecodeInterfaceTypes { NONE, LEAF, SERIAL8, RING8, RING16, RING32, PARALLEL, PARALLEL_PULSED, ENGINE1} 
+	public enum SVDecodeInterfaceTypes { NONE, LEAF, SERIAL8, RING8, RING16, RING32, PARALLEL, PARALLEL_PULSED, ENGINE1, SPI} 
 	public enum SVChildInfoModes { PERL, MODULE } 
 	public enum UVMModelModes { HEAVY, LITE1, NATIVE } 
 	
@@ -150,6 +150,8 @@ public class ExtParameters extends ExtParmsBaseListener  {
 		initBooleanParameter("use_global_dv_bind_controls", false); 
 		initBooleanParameter("include_addr_monitor", false); 
 		initBooleanParameter("generate_iwrap_xform_modules", true); 
+		initBooleanParameter("include_sequential_assign_delays", true); 
+		initBooleanParameter("reset_all_outputs", false); 
 		
 		// ---- rdl output defaults
 		initBooleanParameter("root_component_is_instanced", true); 
@@ -194,6 +196,9 @@ public class ExtParameters extends ExtParmsBaseListener  {
 		// ---- xml output defaults
 		initBooleanParameter("include_field_hw_info", true);
 		initBooleanParameter("include_component_info", false);
+		
+		// ---- pydrvmod output defaults
+		initStringParameter("default_tag_name", null);
 	}
 	
 	static void initBooleanParameter(String name, Boolean value) {
@@ -414,6 +419,13 @@ public class ExtParameters extends ExtParmsBaseListener  {
 	@Override public void enterXml_out_parm_assign(ExtParmsParser.Xml_out_parm_assignContext ctx) {
 		assignParameter(ctx.getChild(0).getText(), ctx.getChild(2).getText());		
 	}
+	
+	/**
+	 * Assign pydrvmod output parameters
+	 */
+	@Override public void enterPydrvmod_out_parm_assign(ExtParmsParser.Pydrvmod_out_parm_assignContext ctx) {
+		assignParameter(ctx.getChild(0).getText(), ctx.getChild(2).getText());		
+	}
 
 	/**
 	 * Capture annotation command  
@@ -469,6 +481,7 @@ public class ExtParameters extends ExtParmsBaseListener  {
 		}
 		else if (name.equals("root_decoder_interface")) {  
 			if (value.equals("leaf")) sysVerRootDecoderInterface = SVDecodeInterfaceTypes.LEAF;
+			else if (value.equals("spi_PIO")) sysVerRootDecoderInterface = SVDecodeInterfaceTypes.SPI;
 			else if (value.equals("serial8")) sysVerRootDecoderInterface = SVDecodeInterfaceTypes.SERIAL8;
 			else if (value.equals("ring8")) sysVerRootDecoderInterface = SVDecodeInterfaceTypes.RING8;
 			else if (value.equals("ring16")) sysVerRootDecoderInterface = SVDecodeInterfaceTypes.RING16;
@@ -478,6 +491,7 @@ public class ExtParameters extends ExtParmsBaseListener  {
 		}
 		else if (name.equals("secondary_decoder_interface")) {  
 			if (value.equals("leaf")) sysVerSecondaryDecoderInterface = SVDecodeInterfaceTypes.LEAF;
+			else if (value.equals("spi_PIO")) sysVerSecondaryDecoderInterface = SVDecodeInterfaceTypes.SPI;
 			else if (value.equals("serial8")) sysVerSecondaryDecoderInterface = SVDecodeInterfaceTypes.SERIAL8;
 			else if (value.equals("ring8")) sysVerSecondaryDecoderInterface = SVDecodeInterfaceTypes.RING8;
 			else if (value.equals("ring16")) sysVerSecondaryDecoderInterface = SVDecodeInterfaceTypes.RING16;
@@ -813,7 +827,15 @@ public class ExtParameters extends ExtParmsBaseListener  {
 	public static boolean sysVerGenerateIwrapXformModules() {
 		return getBooleanParameter("generate_iwrap_xform_modules");
 	}
-		
+	
+	public static String sysVerSequentialAssignDelayString() {
+		return getBooleanParameter("include_sequential_assign_delays")? "#1 " : "";
+	}
+	
+	public static boolean sysVerResetAllOutputs() {
+		return getBooleanParameter("reset_all_outputs");
+	}
+	
 	// bench parameter getters
 
 	public static Boolean sysVerGenerateExternalRegs() {
@@ -954,6 +976,16 @@ public class ExtParameters extends ExtParmsBaseListener  {
 		return uvmregsBaseAddressOverride() != null;
 	}
 	
+	// pydrvmod getters/setters
+	
+	public static String pyDrvDefaultTagName() {
+		return getStringParameter("default_tag_name");
+	}
+	
+	public static boolean hasPyDrvDefaultTagName() {
+		return getStringParameter("default_tag_name") != null;
+	}
+		
 	// --------
 	
 	/** returns true if test commands have been specified  */
