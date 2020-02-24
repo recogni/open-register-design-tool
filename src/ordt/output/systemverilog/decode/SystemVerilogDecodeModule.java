@@ -2344,25 +2344,20 @@ public class SystemVerilogDecodeModule extends SystemVerilogModule {
 		this.addCombinAssign(groupName,   "      end"); 
 		this.addCombinAssign(groupName,   "    end");
 		
-		String finalRetCntStr = getSerialMaxDataCountStr(useTransactionSize, transactionsInWord, pioInterfaceRetTransactionSizeName);
 
 		// RES_READ - send read data
 		this.addCombinAssign(groupName,     "  " + RES_READ + ": begin  // RES_READ"); 
 		this.addCombinAssign(groupName,     "      " + resValidDlyName[0] + " =  1'b1;");  // res is valid
 
-		this.addCombinAssign(groupName,     "      if ( !" +  ringResRdyName + ") begin ");
-		this.addCombinAssign(groupName,     "        " + ringDataCntNextName + " = " + ringDataCntName + ";" );
-
-		this.addCombinAssign(groupName,     "      end else begin" );
-		this.addCombinAssign(groupName,     "      if (" + ringDataCntName + " == " + finalRetCntStr + ") " + ringStateNextName + " = " + IDLE + ";");
 
 		if (useDataCounter) {
-				// if final count we're done
+			this.addCombinAssign(groupName,     "      if ( !" +  ringResRdyName + ") begin ");
+			this.addCombinAssign(groupName,     "        " + ringDataCntNextName + " = " + ringDataCntName + ";" );
 	
-			//  bump the data count
-			this.addCombinAssign(groupName, "        " + ringDataCntNextName + " = " + ringDataCntName + " + " + maxDataXferCountBits + "'b1;");
-			this.addCombinAssign(groupName, "      end");
+			this.addCombinAssign(groupName,     "      end else begin" );
 
+			//  bump the data count
+			this.addCombinAssign(groupName,     "      " + ringDataCntNextName + " = " + ringDataCntName + " + " + maxDataXferCountBits + "'b1;");
 			// send the data slice while 
 			for (int idx=0; idx<maxDataXferCount; idx++) {
 				prefix = (idx == 0)? "" : "else ";
@@ -2370,11 +2365,16 @@ public class SystemVerilogDecodeModule extends SystemVerilogModule {
 				this.addCombinAssign(groupName, "        " + resDataDlyName[0] + " = " + ringRdCaptureName + SystemVerilogSignal.genRefArrayString(ringWidth*idx, ringWidth) + ";");
 			}
 
+			// if final count we're done
+			String finalRetCntStr = getSerialMaxDataCountStr(useTransactionSize, transactionsInWord, pioInterfaceRetTransactionSizeName);
+			this.addCombinAssign(groupName, "      if (" + ringDataCntName + " == " + finalRetCntStr + ") " + ringStateNextName + " = " + IDLE + ";");
+			this.addCombinAssign(groupName,     "      end"); 
 		}
 		else {
-			this.addCombinAssign(groupName, "        " + resDataDlyName[0] + " = " + ringRdCaptureName + SystemVerilogSignal.genRefArrayString(0, ringWidth) + ";");
-			this.addCombinAssign(groupName, "        " + ringStateNextName + " = " + IDLE + ";");	
+			this.addCombinAssign(groupName, "      " + resDataDlyName[0] + " = " + ringRdCaptureName + SystemVerilogSignal.genRefArrayString(0, ringWidth) + ";");
+			this.addCombinAssign(groupName, "      " + ringStateNextName + " = " + IDLE + ";");	
 		}
+
 		this.addCombinAssign(groupName,     "    end"); 
 		
 		// CMD_BYPASS - feed write data into bypass fifo  
