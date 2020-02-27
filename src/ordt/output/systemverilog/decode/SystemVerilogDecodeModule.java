@@ -2351,28 +2351,32 @@ public class SystemVerilogDecodeModule extends SystemVerilogModule {
 
 
 		if (useDataCounter) {
-			this.addCombinAssign(groupName,     "      if ( !" +  ringResRdyName + ") begin ");
+			this.addCombinAssign(groupName,     "      if ( !" +  ringResRdyName + " ) begin ");
 			this.addCombinAssign(groupName,     "        " + ringDataCntNextName + " = " + ringDataCntName + ";" );
-	
 			this.addCombinAssign(groupName,     "      end else begin" );
 
 			//  bump the data count
-			this.addCombinAssign(groupName,     "      " + ringDataCntNextName + " = " + ringDataCntName + " + " + maxDataXferCountBits + "'b1;");
-			// send the data slice while 
+			this.addCombinAssign(groupName,     "        " + ringDataCntNextName + " = " + ringDataCntName + " + " + maxDataXferCountBits + "'b1;");
+
+			// if final count we're done
+			String finalRetCntStr = getSerialMaxDataCountStr(useTransactionSize, transactionsInWord, pioInterfaceRetTransactionSizeName);
+			this.addCombinAssign(groupName,     "        if (" + ringDataCntName + " == " + finalRetCntStr + ") " + ringStateNextName + " = " + IDLE + ";");
+			this.addCombinAssign(groupName,     "      end"); 
+
+
 			for (int idx=0; idx<maxDataXferCount; idx++) {
 				prefix = (idx == 0)? "" : "else ";
 				this.addCombinAssign(groupName, "      "+ prefix + "if (" + ringDataCntName + " == " + maxDataXferCountBits + "'d" + idx + ")");  
 				this.addCombinAssign(groupName, "        " + resDataDlyName[0] + " = " + ringRdCaptureName + SystemVerilogSignal.genRefArrayString(ringWidth*idx, ringWidth) + ";");
 			}
 
-			// if final count we're done
-			String finalRetCntStr = getSerialMaxDataCountStr(useTransactionSize, transactionsInWord, pioInterfaceRetTransactionSizeName);
-			this.addCombinAssign(groupName, "      if (" + ringDataCntName + " == " + finalRetCntStr + ") " + ringStateNextName + " = " + IDLE + ";");
-			this.addCombinAssign(groupName,     "      end"); 
+
 		}
 		else {
 			this.addCombinAssign(groupName, "      " + resDataDlyName[0] + " = " + ringRdCaptureName + SystemVerilogSignal.genRefArrayString(0, ringWidth) + ";");
-			this.addCombinAssign(groupName, "      " + ringStateNextName + " = " + IDLE + ";");	
+			this.addCombinAssign(groupName, "      if ( " +  ringResRdyName + " ) begin ");
+			this.addCombinAssign(groupName, "          " + ringStateNextName + " = " + IDLE + ";");	
+			this.addCombinAssign(groupName, "      end"); 
 		}
 
 		this.addCombinAssign(groupName,     "    end"); 
