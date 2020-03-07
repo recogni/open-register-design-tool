@@ -39,3 +39,5 @@ hs_err_pid*
 /build/
 
 .DS_Store
+
+*.egg-info/
