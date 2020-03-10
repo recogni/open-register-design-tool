@@ -365,32 +365,30 @@ def print_width_vars(struct_list, language="pl") -> str:
     return width_str
 
 
-class RecogniWriter(object):
-    def __init__(self):
-        pass
+################################################################################
 
-    def print_all(self, args, filenames, printer):
-        # Extract file information from the provided name.
-        # TODO (sabhiram) : Use os.path.basename / ext here.
-        ip_filename_without_the_extension = os.path.split(filenames[0])[
-            1
-        ].split(".")[0]
-        op_filename_without_the_extension = (
-            ip_filename_without_the_extension + args.output_suffix
-        )
+
+class SvWriter(object):
+    def __init__(self, filenames, printer):
+        self.filenames = filenames
+        self.printer = printer
+
+    def write(self, args):
+        ip_filename_no_ext = os.path.split(self.filenames[0])[1].split(".")[0]
+        op_filename_no_ext = ip_filename_no_ext + args.output_suffix
 
         # Build the output file by sections (header, enums, struct and tail).
         struct_enum_op_str = ""
         struct_enum_op_str += print_header(
-            filename=op_filename_without_the_extension,
-            includes=printer.includes,
+            filename=op_filename_no_ext,
+            includes=self.printer.includes,
             package_def=args.package_def,
             language="sv",
         )
-        struct_enum_op_str += print_enums(printer.enums, language="sv")
-        struct_enum_op_str += print_structs(printer.structs, language="sv")
+        struct_enum_op_str += print_enums(self.printer.enums, language="sv")
+        struct_enum_op_str += print_structs(self.printer.structs, language="sv")
         struct_enum_op_str += print_tail(
-            filename=op_filename_without_the_extension,
+            filename=op_filename_no_ext,
             package_def=args.package_def,
             language="sv",
         )
@@ -406,9 +404,7 @@ class RecogniWriter(object):
         base_vh_filepath = (
             args.output_dir
         )  # can be made args.output_vh_dir later
-        vh_filepath = os.path.join(
-            base_vh_filepath, op_filename_without_the_extension + ".vh"
-        )
+        vh_filepath = os.path.join(base_vh_filepath, op_filename_no_ext + ".vh")
 
         # Sanity checking for file clobbering.
         if not args.clobber_files and os.path.isfile(vh_filepath):
@@ -424,23 +420,23 @@ class RecogniWriter(object):
         #### perl language width prints ####
         width_var_op_str = ""
         width_var_op_str += print_header(
-            filename=op_filename_without_the_extension,
-            includes=printer.includes,
+            filename=op_filename_no_ext,
+            includes=self.printer.includes,
             language="pl",
         )
-        width_var_op_str += print_width_vars(printer.enums, language="pl")
-        width_var_op_str += print_width_vars(printer.structs, language="pl")
+        width_var_op_str += print_width_vars(self.printer.enums, language="pl")
+        width_var_op_str += print_width_vars(
+            self.printer.structs, language="pl"
+        )
         width_var_op_str += print_tail(
-            filename=op_filename_without_the_extension, language="pl"
+            filename=op_filename_no_ext, language="pl"
         )
         #  print(width_var_op_str)
 
         base_pl_filepath = (
             args.output_dir
         )  # can be made args.output_pl_dir later
-        pl_filepath = os.path.join(
-            base_pl_filepath, op_filename_without_the_extension + ".pl"
-        )
+        pl_filepath = os.path.join(base_pl_filepath, op_filename_no_ext + ".pl")
 
         if not args.clobber_files and os.path.isfile(pl_filepath):
             panic(
@@ -450,3 +446,50 @@ class RecogniWriter(object):
 
         with open(pl_filepath, "w") as fout:
             fout.write(width_var_op_str)
+
+
+################################################################################
+
+
+class SystemCWriter(object):
+    def __init__(self, filenames, printer):
+        self.filenames = filenames
+        self.printer = printer
+
+    def write(self, args):
+        print("TOOD: Implement SystemC Writer\n")
+        return False
+
+
+################################################################################
+
+
+class JSONWriter(object):
+    def __init__(self, filenames, printer):
+        self.filenames = filenames
+        self.printer = printer
+
+    def write(self, args):
+        print("TOOD: Implement JSON Writer\n")
+        return False
+
+
+################################################################################
+
+
+class RecogniWriter(object):
+    def __init__(self, filenames, printer):
+        self.filenames = filenames
+        self.printer = printer
+
+    def write(self, args):
+        for ot in args.output_types:
+            if ot == "sv":
+                SvWriter(self.filenames, self.printer).write(args)
+            elif ot == "sc":
+                SystemCWriter(self.filenames, self.printer).write(args)
+            elif ot == "json":
+                JSONWriter(self.filenames, self.printer).write(args)
+            else:
+                print("Unknown output type %s encountered\n", ot)
+        return True
