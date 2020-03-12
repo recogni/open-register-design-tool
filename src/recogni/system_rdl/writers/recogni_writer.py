@@ -633,6 +633,7 @@ class SvWriter(object):
         self.filenames = filenames
         self.printer = printer
         self.output_dir = "."
+        self.name = os.path.split(self.filenames[0])[1].split(".")[0]
 
     def print_header(self, filename, delim="//", package_def=False) -> str:
         HEADER_WIDTH = 50
@@ -928,15 +929,23 @@ class SystemCWriter(object):
         self.filenames = filenames
         self.printer = printer
         self.output_dir = "."
+        self.name = os.path.split(self.filenames[0])[1].split(".")[0]
 
     def write(self, args):
         self.output_dir = ensure_output_dir(args.output_dir, "sc")
+
         lines = """/*
  *  Auto-generated file. Do not edit!
  */
 
+#ifndef _%s_
+#define _%s_
+
 using namespace std;
-#include <bitset>""".split(
+#include <bitset>""" % (
+            self.name.upper(),
+            self.name.upper(),
+        ).split(
             "\n"
         )
         for e in [
@@ -959,8 +968,13 @@ using namespace std;
             fs = s.get("fields", [])
             st = Struct(n, d, fs, {})
             lines.extend([st.render("RT_SYSTEMC")])
-        fn = "sc_" + os.path.split(self.filenames[0])[1].split(".")[0] + ".h"
-        fp = os.path.join(self.output_dir, fn)
+        lines.extend(
+            """
+#endif // _%s_"""
+            % (self.name.upper()).split("\n")
+        )
+
+        fp = os.path.join(self.output_dir, self.name + ".h")
         with open(fp, "w") as fout:
             fout.write("\n".join(lines))
         return True
@@ -974,6 +988,7 @@ class CPPWriter(object):
         self.filenames = filenames
         self.printer = printer
         self.output_dir = "."
+        self.name = os.path.split(self.filenames[0])[1].split(".")[0]
 
     def write(self, args):
         self.output_dir = ensure_output_dir(args.output_dir, "cpp")
@@ -981,8 +996,14 @@ class CPPWriter(object):
  *  Auto-generated file. Do not edit!
  */
 
+#ifndef _%s_
+#define _%s_
+
 using namespace std;
-#include <bitset>""".split(
+#include <bitset>""" % (
+            self.name.upper(),
+            self.name.upper(),
+        ).split(
             "\n"
         )
         for e in [e for e in self.printer.enums if e.get("at_top_level", True)]:
@@ -1001,6 +1022,12 @@ using namespace std;
             fs = s.get("fields", [])
             st = Struct(n, d, fs, {})
             lines.extend([st.render("RT_CPP")])
+        lines.extend(
+            """
+#endif // _%s_"""
+            % (self.name.upper()).split("\n")
+        )
+
         fn = os.path.split(self.filenames[0])[1].split(".")[0] + ".h"
         fp = os.path.join(self.output_dir, fn)
         with open(fp, "w") as fout:
