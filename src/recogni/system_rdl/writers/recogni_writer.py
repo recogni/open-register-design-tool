@@ -946,9 +946,7 @@ using namespace std;
 #include <bitset>"""
             % (self.name.upper(), self.name.upper())
         ).split("\n")
-        for e in [
-            e for e in self.printer.enums if True or e.get("at_top_level", True)
-        ]:
+        for e in [e for e in self.printer.enums if e.get("at_top_level", True)]:
             n = e.get("name", "UNDEFINED")
             t = e.get("type") or "logic"
             w = e.get("width", "1")
@@ -957,9 +955,7 @@ using namespace std;
             en = Enum(n, t, w, d, v, {})
             lines.extend([en.render("RT_SYSTEMC")])
         for s in [
-            s
-            for s in self.printer.structs
-            if True or s.get("at_top_level", True)
+            s for s in self.printer.structs if s.get("at_top_level", True)
         ]:
             n = s.get("name", "UNDEFINED")
             d = s.get("desc") or ""
