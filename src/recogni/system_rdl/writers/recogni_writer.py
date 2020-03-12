@@ -934,7 +934,8 @@ class SystemCWriter(object):
     def write(self, args):
         self.output_dir = ensure_output_dir(args.output_dir, "sc")
 
-        lines = """/*
+        lines = (
+            """/*
  *  Auto-generated file. Do not edit!
  */
 
@@ -942,12 +943,9 @@ class SystemCWriter(object):
 #define _%s_
 
 using namespace std;
-#include <bitset>""" % (
-            self.name.upper(),
-            self.name.upper(),
-        ).split(
-            "\n"
-        )
+#include <bitset>"""
+            % (self.name.upper(), self.name.upper())
+        ).split("\n")
         for e in [
             e for e in self.printer.enums if True or e.get("at_top_level", True)
         ]:
@@ -969,9 +967,11 @@ using namespace std;
             st = Struct(n, d, fs, {})
             lines.extend([st.render("RT_SYSTEMC")])
         lines.extend(
-            """
+            (
+                """
 #endif // _%s_"""
-            % (self.name.upper()).split("\n")
+                % (self.name.upper())
+            ).split("\n")
         )
 
         fp = os.path.join(self.output_dir, self.name + ".h")
@@ -992,7 +992,8 @@ class CPPWriter(object):
 
     def write(self, args):
         self.output_dir = ensure_output_dir(args.output_dir, "cpp")
-        lines = """/*
+        lines = (
+            """/*
  *  Auto-generated file. Do not edit!
  */
 
@@ -1000,12 +1001,9 @@ class CPPWriter(object):
 #define _%s_
 
 using namespace std;
-#include <bitset>""" % (
-            self.name.upper(),
-            self.name.upper(),
-        ).split(
-            "\n"
-        )
+#include <bitset>"""
+            % (self.name.upper(), self.name.upper())
+        ).split("\n")
         for e in [e for e in self.printer.enums if e.get("at_top_level", True)]:
             n = e.get("name", "UNDEFINED")
             t = e.get("type") or "logic"
@@ -1023,9 +1021,11 @@ using namespace std;
             st = Struct(n, d, fs, {})
             lines.extend([st.render("RT_CPP")])
         lines.extend(
-            """
+            (
+                """
 #endif // _%s_"""
-            % (self.name.upper()).split("\n")
+                % (self.name.upper())
+            ).split("\n")
         )
 
         fn = os.path.split(self.filenames[0])[1].split(".")[0] + ".h"
