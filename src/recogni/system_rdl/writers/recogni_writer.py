@@ -869,7 +869,7 @@ class SvWriter(object):
 
     def write(self, args):
         ofn = self.get_output_filename(args.output_suffix)
-        self.output_dir = ensure_output_dir(args.output_dir, "sv")
+        self.output_dir = ensure_output_dir(args.output_dir)
 
         # Build the output file by sections (header, enums, struct and tail).
         struct_enum_op_str = self.print_header(
