@@ -504,8 +504,14 @@ struct {{d.name}}
 
     {{d.name}}_T& operator=(const {{d.name}}_T& rhs)
     {
-{% for f in d.fields %}        {{f.name}} = rhs.{{f.name}};
-{% endfor %}        return *this;
+        {%- for f in d.fields %} {%- if f.is_count_array() %}
+        for (uint i = 0; i < {{f.get_count_str_or_tmpl()}}; ++i)
+            {{f.name}}[i] = rhs.{{f.name}}[i];
+        {%- else %}
+        {{f.name}} = rhs.{{f.name}};
+        {%- endif %}
+        {%- endfor %}
+        return *this;
     }
 };
 
@@ -925,7 +931,14 @@ class SystemCWriter(object):
 
     def write(self, args):
         self.output_dir = ensure_output_dir(args.output_dir, "sc")
-        lines = []
+        lines = """/*
+ *  Auto-generated file. Do not edit!
+ */
+
+using namespace std;
+#include <bitset>""".split(
+            "\n"
+        )
         for e in [
             e for e in self.printer.enums if True or e.get("at_top_level", True)
         ]:
@@ -964,7 +977,14 @@ class CPPWriter(object):
 
     def write(self, args):
         self.output_dir = ensure_output_dir(args.output_dir, "cpp")
-        lines = []
+        lines = """/*
+ *  Auto-generated file. Do not edit!
+ */
+
+using namespace std;
+#include <bitset>""".split(
+            "\n"
+        )
         for e in [e for e in self.printer.enums if e.get("at_top_level", True)]:
             n = e.get("name", "UNDEFINED")
             t = e.get("type") or "logic"
