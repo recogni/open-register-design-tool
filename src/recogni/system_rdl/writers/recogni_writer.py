@@ -116,8 +116,8 @@ def fatal(msg):
     os.exit(1)
 
 
-def ensure_output_dir(base, subpath):
-    ndir = os.path.join(base, subpath)
+def ensure_output_dir(base, subpath=None):
+    ndir = base if subpath is None else os.path.join(base, subpath)
     os.makedirs(ndir, exist_ok=True)
     return ndir
 
