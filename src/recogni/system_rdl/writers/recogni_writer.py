@@ -189,7 +189,7 @@ enum class {{d.name}}
 {% endfor -%}
 };
 
-inline ostream& operator<<(ostream& os, const {{d.name}}& ev)
+inline std::ostream& operator<<(std::ostream& os, const {{d.name}}& ev)
 {
     switch (ev)
     {
@@ -227,7 +227,7 @@ enum class {{d.name}}
 {% endfor -%}
 };
 
-inline ostream& operator<<(ostream& os, const {{d.name}}& ev)
+inline std::ostream& operator<<(std::ostream& os, const {{d.name}}& ev)
 {
     switch (ev)
     {
@@ -376,6 +376,9 @@ class StructField:
             return self.count_t[0]
         return self.count
 
+    def is_wire_type(self):
+        return self.type == "logic"
+
     def is_width_array(self):
         return int(self.get_width_str()) > 1
 
@@ -445,7 +448,7 @@ struct {{d.name}} : JSONable
 };
 
 {{ d.template_params | c_template_header -}}
-inline ostream& operator<<(ostream& os, const {{d.name}}{{ d.template_params | c_template_list }}& state)
+inline std::ostream& operator<<(std::ostream& os, const {{d.name}}{{ d.template_params | c_template_list }}& state)
 {
     {%- for f in d.fields %} {%- if f.is_count_array() %}
     for (uint i = 0; i < {{f.get_count_str_or_tmpl()}}; ++i)
@@ -513,10 +516,33 @@ struct {{d.name}}
         {%- endfor %}
         return *this;
     }
+
+    void PrintMinimal(std::ostream& os, const std::string prefix="")
+    {
+        os << prefix << "{{d.name}}=" << std::endl;
+        const std::string np = prefix + "  ";
+        {%- for f in d.fields %} {%- if f.is_count_array() %}
+        for (uint i = 0; i < {{f.get_count_str_or_tmpl()}}; ++i)
+        {
+            {%- if f.is_wire_type() %}
+            if ({{f.name}}[i] != 0) os << np << "{{f.name}}[i]=" << {{f.name}}[i].to_ulong() << std::endl;
+            {%- else %}
+            os << np << "{{f.name}}[i]=" << {{f.name}}[i] << std::endl;
+            {%- endif %}
+        }
+        {%- else %}
+        {%- if f.is_wire_type() %}
+        if ({{f.name}} != 0) os << np << "{{f.name}}=" << {{f.name}}.to_ulong() << std::endl;
+        {%- else %}
+        os << np << "{{f.name}}=" << {{f.name}} << std::endl;
+        {%- endif %}
+        {%- endif %}
+        {%- endfor %}
+    }
 };
 
 {{ d.template_params | c_template_header -}}
-inline ostream& operator<<(ostream& os, const {{d.name}}{{ d.template_params | c_template_list }}& state)
+inline std::ostream& operator<<(std::ostream& os, const {{d.name}}{{ d.template_params | c_template_list }}& state)
 {
     {%- for f in d.fields %} {%- if f.is_count_array() %}
     for (uint i = 0; i < {{f.get_count_str_or_tmpl()}}; ++i)
@@ -1044,6 +1070,8 @@ class JSONWriter(object):
         self.output_dir = ensure_output_dir(args.output_dir, "json")
         # TODO: TextIOWrapper is not JSON serializable
         fn = os.path.split(self.filenames[0])[1].split(".")[0]
+        for s in self.printer.structs:
+            print(s)
         # with open("%s_structs.json" % (fn), "w") as fout:
         #     json.dump(fout, self.printer.structs)
         # with open("%s_enums.json" % (fn), "w") as fout:
