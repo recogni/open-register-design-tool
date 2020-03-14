@@ -445,18 +445,58 @@ struct {{d.name}} : JSONable
         {%- endfor %}
         };
     }
+
+    void PrintMinimal(std::ostream& os, const std::string prefix="") const
+    {
+        os << prefix << "{{d.name}}=" << std::endl;
+        const std::string np = prefix + "  ";
+        {%- for f in d.fields %} {%- if f.is_count_array() %}
+        for (uint i = 0; i < {{f.get_count_str_or_tmpl()}}; ++i)
+        {
+            {%- if f.is_wire_type() %}
+            if ({{f.name}}[i] != 0) os << np << "{{f.name}}[i]=" << {{f.name}}[i].to_ulong() << std::endl;
+            {%- else %}
+            os << np << "{{f.name}}[i]=" << {{f.name}}[i] << std::endl;
+            {%- endif %}
+        }
+        {%- else %}
+        {%- if f.is_wire_type() %}
+        if ({{f.name}} != 0) os << np << "{{f.name}}=" << {{f.name}}.to_ulong() << std::endl;
+        {%- else %}
+        os << np << "{{f.name}}=" << {{f.name}} << std::endl;
+        {%- endif %}
+        {%- endif %}
+        {%- endfor %}
+    }
+
+    void Print(std::ostream& os, const std::string prefix="") const
+    {
+        os << prefix << "{{d.name}}=" << std::endl;
+        const std::string np = prefix + "  ";
+        {%- for f in d.fields %} {%- if f.is_count_array() %}
+        for (uint i = 0; i < {{f.get_count_str_or_tmpl()}}; ++i)
+        {
+            {%- if f.is_wire_type() %}
+            os << np << "{{f.name}}[i]=" << {{f.name}}[i].to_ulong() << std::endl;
+            {%- else %}
+            os << np << "{{f.name}}[i]=" << {{f.name}}[i] << std::endl;
+            {%- endif %}
+        }
+        {%- else %}
+        {%- if f.is_wire_type() %}
+        os << np << "{{f.name}}=" << {{f.name}}.to_ulong() << std::endl;
+        {%- else %}
+        os << np << "{{f.name}}=" << {{f.name}} << std::endl;
+        {%- endif %}
+        {%- endif %}
+        {%- endfor %}
+    }
 };
 
 {{ d.template_params | c_template_header -}}
 inline std::ostream& operator<<(std::ostream& os, const {{d.name}}{{ d.template_params | c_template_list }}& state)
 {
-    {%- for f in d.fields %} {%- if f.is_count_array() %}
-    for (uint i = 0; i < {{f.get_count_str_or_tmpl()}}; ++i)
-        os << " {{f.name}}[" << i << "]=" << state.{{f.name}}[i];
-    {%- else %}
-    os << " {{f.name}}=" << state.{{f.name}};
-    {%- endif %}
-    {%- endfor %}
+    state.Print(os);
     return os;
 }
 
@@ -517,7 +557,7 @@ struct {{d.name}}
         return *this;
     }
 
-    void PrintMinimal(std::ostream& os, const std::string prefix="")
+    void PrintMinimal(std::ostream& os, const std::string prefix="") const
     {
         os << prefix << "{{d.name}}=" << std::endl;
         const std::string np = prefix + "  ";
@@ -539,18 +579,35 @@ struct {{d.name}}
         {%- endif %}
         {%- endfor %}
     }
+
+    void Print(std::ostream& os, const std::string prefix="") const
+    {
+        os << prefix << "{{d.name}}=" << std::endl;
+        const std::string np = prefix + "  ";
+        {%- for f in d.fields %} {%- if f.is_count_array() %}
+        for (uint i = 0; i < {{f.get_count_str_or_tmpl()}}; ++i)
+        {
+            {%- if f.is_wire_type() %}
+            os << np << "{{f.name}}[i]=" << {{f.name}}[i].to_ulong() << std::endl;
+            {%- else %}
+            os << np << "{{f.name}}[i]=" << {{f.name}}[i] << std::endl;
+            {%- endif %}
+        }
+        {%- else %}
+        {%- if f.is_wire_type() %}
+        os << np << "{{f.name}}=" << {{f.name}}.to_ulong() << std::endl;
+        {%- else %}
+        os << np << "{{f.name}}=" << {{f.name}} << std::endl;
+        {%- endif %}
+        {%- endif %}
+        {%- endfor %}
+    }
 };
 
 {{ d.template_params | c_template_header -}}
 inline std::ostream& operator<<(std::ostream& os, const {{d.name}}{{ d.template_params | c_template_list }}& state)
 {
-    {%- for f in d.fields %} {%- if f.is_count_array() %}
-    for (uint i = 0; i < {{f.get_count_str_or_tmpl()}}; ++i)
-        os << " {{f.name}}[" << i << "]=" << state.{{f.name}}[i];
-    {%- else %}
-    os << " {{f.name}}=" << state.{{f.name}};
-    {%- endif %}
-    {%- endfor %}
+    state.Print(os);
     return os;
 }
 
