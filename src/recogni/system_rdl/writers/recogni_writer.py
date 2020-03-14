@@ -454,9 +454,9 @@ struct {{d.name}} : JSONable
         for (uint i = 0; i < {{f.get_count_str_or_tmpl()}}; ++i)
         {
             {%- if f.is_wire_type() %}
-            if ({{f.name}}[i] != 0) os << np << "{{f.name}}[i]=" << {{f.name}}[i].to_ulong() << std::endl;
+            if ({{f.name}}[i] != 0) os << np << "{{f.name}}[" << i << "]=" << {{f.name}}[i].to_ulong() << std::endl;
             {%- else %}
-            os << np << "{{f.name}}[i]=" << {{f.name}}[i] << std::endl;
+            os << np << "{{f.name}}[" << i << "]=" << {{f.name}}[i] << std::endl;
             {%- endif %}
         }
         {%- else %}
@@ -477,9 +477,9 @@ struct {{d.name}} : JSONable
         for (uint i = 0; i < {{f.get_count_str_or_tmpl()}}; ++i)
         {
             {%- if f.is_wire_type() %}
-            os << np << "{{f.name}}[i]=" << {{f.name}}[i].to_ulong() << std::endl;
+            os << np << "{{f.name}}[" << i << "]=" << {{f.name}}[i].to_ulong() << std::endl;
             {%- else %}
-            os << np << "{{f.name}}[i]=" << {{f.name}}[i] << std::endl;
+            os << np << "{{f.name}}[" << i << "]=" << {{f.name}}[i] << std::endl;
             {%- endif %}
         }
         {%- else %}
@@ -565,9 +565,9 @@ struct {{d.name}}
         for (uint i = 0; i < {{f.get_count_str_or_tmpl()}}; ++i)
         {
             {%- if f.is_wire_type() %}
-            if ({{f.name}}[i] != 0) os << np << "{{f.name}}[i]=" << {{f.name}}[i].to_ulong() << std::endl;
+            if ({{f.name}}[i] != 0) os << np << "{{f.name}}[" << i << "]=" << {{f.name}}[i].to_ulong() << std::endl;
             {%- else %}
-            os << np << "{{f.name}}[i]=" << {{f.name}}[i] << std::endl;
+            os << np << "{{f.name}}[" << i << "]=" << {{f.name}}[i] << std::endl;
             {%- endif %}
         }
         {%- else %}
@@ -588,9 +588,9 @@ struct {{d.name}}
         for (uint i = 0; i < {{f.get_count_str_or_tmpl()}}; ++i)
         {
             {%- if f.is_wire_type() %}
-            os << np << "{{f.name}}[i]=" << {{f.name}}[i].to_ulong() << std::endl;
+            os << np << "{{f.name}}[" << i << "]=" << {{f.name}}[i].to_ulong() << std::endl;
             {%- else %}
-            os << np << "{{f.name}}[i]=" << {{f.name}}[i] << std::endl;
+            os << np << "{{f.name}}[" << i << "]=" << {{f.name}}[i] << std::endl;
             {%- endif %}
         }
         {%- else %}
