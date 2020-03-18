@@ -1,3 +1,4 @@
+import copy
 import json
 import os
 import re
@@ -858,6 +859,7 @@ inline std::ostream& operator<<(std::ostream& os, const {{d.name}}{{ d.template_
         elif type == "RT_SYSTEMC_TEST_HARNESS":
             return ret + self.sysc_test_harness.render(d=self)
         elif type == "RT_SYSTEMC_USER_CONTROL":
+            print("Rendering ", self)
             return ret + self.sysc_uc.render(d=self)
         fatal("Fatal error: Invalid render type encountered!")
         return None
@@ -1202,16 +1204,15 @@ using namespace std;
             lines.extend([en.render("RT_SYSTEMC")])
 
         # Print structs
-        thgen_list = []
         ss = [s for s in self.printer.structs if s.get("at_top_level", True)]
         for s in ss:
             n = s.get("name", "UNDEFINED")
             d = s.get("desc") or ""
             fs = s.get("fields", [])
             st = Struct(n, d, fs, {})
-            if n.endswith("_op_instr_t"):
-                thgen_list.append(st)
             lines.extend([st.render("RT_SYSTEMC")])
+            if n.endswith("_op_instr_t"):
+                thgen_list.append(Struct(n, d, fs, {}))
         lines.extend(("\n#endif // _%s_\n" % (self.name.upper())).split("\n"))
 
         # Write file
@@ -1220,18 +1221,29 @@ using namespace std;
             fout.write("\n".join(lines))
 
         # Print `UserControlHarness`es per op_instr_t
-        for s in thgen_list:
-            nsnake = s.name[: -len("_op_instr_t")]
+        ss = [s for s in self.printer.structs if s.get("at_top_level", True)]
+        for s in ss:
+            n = s.get("name", "UNDEFINED")
+            if not n.endswith("_op_instr_t"):
+                continue
+            d = s.get("desc") or ""
+            fs = s.get("fields", [])
+
+            nsnake = n[: -len("_op_instr_t")]
             ncamel = "".join(w.capitalize() or "_" for w in nsnake.split("_"))
             thname = "test_%s.cpp" % nsnake
 
             ucpath = os.path.join(self.output_dir, "%s.hpp" % nsnake)
             with open(ucpath, "w") as fout:
-                fout.write(st.render("RT_SYSTEMC_USER_CONTROL"))
+                fout.write(
+                    Struct(n, d, fs, {}).render("RT_SYSTEMC_USER_CONTROL")
+                )
 
             thpath = os.path.join(self.test_dir, thname)
             with open(thpath, "w") as fout:
-                fout.write(st.render("RT_SYSTEMC_TEST_HARNESS"))
+                fout.write(
+                    Struct(n, d, fs, {}).render("RT_SYSTEMC_TEST_HARNESS")
+                )
 
         return True
 
