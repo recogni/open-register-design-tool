@@ -29,6 +29,16 @@ def _systemc_type(t, width_str, template_params=[]):
     return t
 
 
+def _systemc_class(t):
+    return "".join([w.capitalize() or "_" for w in t.split("_")])
+
+
+def _systemc_file_name(t, trim="_op_instr_t"):
+    if t.endswith(trim):
+        t = t[: -len(trim)]
+    return t
+
+
 def _cpp_type(t, width_str, template_params=[]):
     if t == "logic":
         return "std::bitset<%s>" % (width_str.lstrip("$"))
@@ -48,6 +58,14 @@ def _verilog_type(t, width_str):
             pass
         return "logic[%s - 1 : 0]" % (width_str)
     return t
+
+
+def _c_header_guard(t):
+    return "__%s__" % (t.upper())
+
+
+def _c_test_header_guard(t):
+    return "__TEST_%s__" % (t.upper())
 
 
 def _c_template_def(t):
@@ -83,10 +101,14 @@ def _c_template_list(tts):
 env = Environment(autoescape=False)
 env.filters["arrayize"] = _arrayize
 env.filters["systemc_type"] = _systemc_type
+env.filters["systemc_class"] = _systemc_class
+env.filters["systemc_file_name"] = _systemc_file_name
 env.filters["verilog_type"] = _verilog_type
 env.filters["cpp_type"] = _cpp_type
 env.filters["c_template_header"] = _c_template_header
 env.filters["c_template_list"] = _c_template_list
+env.filters["c_header_guard"] = _c_header_guard
+env.filters["c_test_header_guard"] = _c_test_header_guard
 
 
 def hydrate(s, d):
@@ -108,7 +130,13 @@ def hydrate(s, d):
 
 ################################################################################
 
-valid_render_types = ["RT_VERILOG", "RT_SYSTEMC", "RT_CPP"]
+valid_render_types = [
+    "RT_VERILOG",
+    "RT_SYSTEMC",
+    "RT_CPP",
+    "RT_SYSTEMC_TEST_HARNESS",
+    "RT_SYSTEMC_USER_CONTROL",
+]
 
 
 def fatal(msg):
@@ -519,6 +547,136 @@ inline void sc_trace(sc_trace_file* tf, const {{d.name}}{{ d.template_params | c
 {%- endif -%}"""
     )
 
+    sysc_uc = env.from_string(
+        """
+/*
+ *  Generated SystemC OpInstruction Implementation.
+ *
+ *  This file is intended to be copied and edited. Note that if our RDLP files
+ *  change the op_instr definition we will need to manually merge these as this
+ *  does not maintain a 3-way-diffable state.
+ */
+#ifndef {{ d.name | c_header_guard }}
+#define {{ d.name | c_header_guard }}
+
+#include "systemc.h"
+#include "traits.h"
+
+template <size_t NumIters>
+class {{ d.name | systemc_file_name | systemc_class }}UserCtrl : public TraceModule
+{
+    SC_HAS_PROCESS({{ d.name | systemc_file_name | systemc_class }}UserCtrl);
+
+   public:
+    /*
+     *  Inputs to this block are the op instruction structure as well as the
+     *  number of iterator values from the sequencer block.
+     */
+    sc_in_clk clk{"clk"};
+    sc_in<{{d.name}}> instr{"instr"};
+    sc_vector<sc_in<sc_uint<32>>> counts{"counts", NumIters};
+
+    // TODO: Fill out outputs from the custom control block here.
+
+    {{ d.name | systemc_file_name | systemc_class }}UserCtrl(sc_module_name name) : TraceModule(name)
+    {
+        SC_CTHREAD(do_tick, clk.pos());
+        trace(&clk, &instr, &counts);
+        // TODO: Trace output signals here
+    }
+
+    void do_tick()
+    {
+        // Control logic "state" goes here.
+
+        while (true)
+        {
+            wait();
+
+            const auto instr = instr.read();
+            // inst.PrintMinimal(std::cout);
+        }
+    }
+};
+
+#endif // {{ d.name | c_header_guard }}
+"""
+    )
+    sysc_test_harness = env.from_string(
+        """
+/*
+ *  Generated SystemC OpInstruction Implementation.
+ *
+ *  This file is intended to be copied and edited. Note that if our RDLP files
+ *  change the op_instr definition we will need to manually merge these as this
+ *  does not maintain a 3-way-diffable state.
+ */
+#include "gtest/gtest.h"
+#include "systemc.h"
+
+#include "tests/factory.hpp"
+#include "traits.h"
+
+#include "../{{d.name | systemc_file_name}}.hpp"
+
+/*
+ *  Define a test harness to use around UserCtl block.
+ */
+class {{ d.name | systemc_file_name | systemc_class }}UserCtlHarness : public TestClockHarness
+{
+   public:
+    typedef DefaultTraits TraitsT;
+    typedef DefaultConfig ConfigT;
+
+    static constexpr size_t NumIters = 1;
+
+    {{ d.name | systemc_file_name | systemc_class }}UserCtrl<NumIters> uc{"uc"};
+    sc_signal<{{ d.name }}> instr_sig{"instr_sig"};
+    sc_vector<sc_signal<sc_uint<32>>> counts_sig{"counts_sig", NumIters};
+
+    {{ d.name | systemc_file_name | systemc_class }}UserCtlHarness() : TestClockHarness()
+    {
+        uc.clk(get_test_clock());
+        uc.instr(instr_sig);
+        for (size_t i = 0; i < NumIters; ++i) uc.counts[i](counts_sig[i]);
+    }
+};
+
+// Register the `{{ d.name | systemc_file_name | systemc_class }}UserCtlHarness` with the factory.
+static TestFactory::Add<{{ d.name | systemc_file_name | systemc_class }}UserCtlHarness> uch("{{ d.name | systemc_file_name | systemc_class }}UserCtlHarness");
+
+////////////////////////////////////////////////////////////////////////////////
+
+/*
+ *  Define a test class to setup / teardown the harness correctly.
+ */
+class Test{{ d.name | systemc_file_name | systemc_class }}UserCtl : public ::testing::Test, public TestConfig
+{
+   protected:
+    void Setup() override
+    {
+        mHarness->get_test_clock().start();
+    }
+    void TearDown() override { mHarness->get_test_clock().stop(); }
+
+    {{ d.name | systemc_file_name | systemc_class }}UserCtlHarness *mHarness{
+        TestFactory::Get<{{ d.name | systemc_file_name | systemc_class }}UserCtlHarness>("{{ d.name | systemc_file_name | systemc_class }}UserCtlHarness")};
+};
+
+////////////////////////////////////////////////////////////////////////////////
+
+TEST_F(Test{{ d.name | systemc_file_name | systemc_class }}UserCtl, TestSimple)
+{
+    {{d.name}} instr = {};
+    mHarness->instr_sig.write(instr);
+
+    wait();
+    wait();
+    wait();
+}
+"""
+    )
+
     cpp = env.from_string(
         """{% if d.fields | length > 0 %}
 {{ d.template_params | c_template_header -}}
@@ -697,6 +855,10 @@ inline std::ostream& operator<<(std::ostream& os, const {{d.name}}{{ d.template_
             return ret + self.systemc.render(d=self)
         elif type == "RT_CPP":
             return ret + self.cpp.render(d=self)
+        elif type == "RT_SYSTEMC_TEST_HARNESS":
+            return ret + self.sysc_test_harness.render(d=self)
+        elif type == "RT_SYSTEMC_USER_CONTROL":
+            return ret + self.sysc_uc.render(d=self)
         fatal("Fatal error: Invalid render type encountered!")
         return None
 
@@ -844,9 +1006,7 @@ class SvWriter(object):
                 for idx, field in enumerate(struct["fields"].__reversed__()):
                     if idx == (len(struct["fields"]) - 1):
                         # we're in the last entry, change the delimiter
-                        delimiter = (
-                            ";"
-                        )  # structures still keep ';' as the last entry delimiter
+                        delimiter = ";"  # structures still keep ';' as the last entry delimiter
 
                     if field["encode"]:
                         # print("I see an enum usage")
@@ -1016,7 +1176,7 @@ class SystemCWriter(object):
 
     def write(self, args):
         self.output_dir = ensure_output_dir(args.output_dir, "sc")
-
+        self.test_dir = ensure_output_dir(self.output_dir, "test")
         lines = (
             """/*
  *  Auto-generated file. Do not edit!
@@ -1029,7 +1189,10 @@ using namespace std;
 #include <bitset>"""
             % (self.name.upper(), self.name.upper())
         ).split("\n")
-        for e in [e for e in self.printer.enums if e.get("at_top_level", True)]:
+
+        # Print enums
+        ee = [e for e in self.printer.enums if e.get("at_top_level", True)]
+        for e in ee:
             n = e.get("name", "UNDEFINED")
             t = e.get("type") or "logic"
             w = e.get("width", "1")
@@ -1037,25 +1200,39 @@ using namespace std;
             d = e.get("desc") or ""
             en = Enum(n, t, w, d, v, {})
             lines.extend([en.render("RT_SYSTEMC")])
-        for s in [
-            s for s in self.printer.structs if s.get("at_top_level", True)
-        ]:
+
+        # Print structs
+        thgen_list = []
+        ss = [s for s in self.printer.structs if s.get("at_top_level", True)]
+        for s in ss:
             n = s.get("name", "UNDEFINED")
             d = s.get("desc") or ""
             fs = s.get("fields", [])
             st = Struct(n, d, fs, {})
+            if n.endswith("_op_instr_t"):
+                thgen_list.append(st)
             lines.extend([st.render("RT_SYSTEMC")])
-        lines.extend(
-            (
-                """
-#endif // _%s_"""
-                % (self.name.upper())
-            ).split("\n")
-        )
+        lines.extend(("\n#endif // _%s_\n" % (self.name.upper())).split("\n"))
 
+        # Write file
         fp = os.path.join(self.output_dir, self.name + ".h")
         with open(fp, "w") as fout:
             fout.write("\n".join(lines))
+
+        # Print `UserControlHarness`es per op_instr_t
+        for s in thgen_list:
+            nsnake = s.name[: -len("_op_instr_t")]
+            ncamel = "".join(w.capitalize() or "_" for w in nsnake.split("_"))
+            thname = "test_%s.cpp" % nsnake
+
+            ucpath = os.path.join(self.output_dir, "%s.hpp" % nsnake)
+            with open(ucpath, "w") as fout:
+                fout.write(st.render("RT_SYSTEMC_USER_CONTROL"))
+
+            thpath = os.path.join(self.test_dir, thname)
+            with open(thpath, "w") as fout:
+                fout.write(st.render("RT_SYSTEMC_TEST_HARNESS"))
+
         return True
 
 
