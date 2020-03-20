@@ -859,7 +859,6 @@ inline std::ostream& operator<<(std::ostream& os, const {{d.name}}{{ d.template_
         elif type == "RT_SYSTEMC_TEST_HARNESS":
             return ret + self.sysc_test_harness.render(d=self)
         elif type == "RT_SYSTEMC_USER_CONTROL":
-            print("Rendering ", self)
             return ret + self.sysc_uc.render(d=self)
         fatal("Fatal error: Invalid render type encountered!")
         return None
@@ -1008,7 +1007,9 @@ class SvWriter(object):
                 for idx, field in enumerate(struct["fields"].__reversed__()):
                     if idx == (len(struct["fields"]) - 1):
                         # we're in the last entry, change the delimiter
-                        delimiter = ";"  # structures still keep ';' as the last entry delimiter
+                        delimiter = (
+                            ";"
+                        )  # structures still keep ';' as the last entry delimiter
 
                     if field["encode"]:
                         # print("I see an enum usage")
@@ -1178,7 +1179,8 @@ class SystemCWriter(object):
 
     def write(self, args):
         self.output_dir = ensure_output_dir(args.output_dir, "sc")
-        self.test_dir = ensure_output_dir(self.output_dir, "test")
+        self.uc_dir = ensure_output_dir(self.output_dir, "user_control")
+        self.uc_test_dir = ensure_output_dir(self.uc_dir, "test")
         lines = (
             """/*
  *  Auto-generated file. Do not edit!
@@ -1211,8 +1213,6 @@ using namespace std;
             fs = s.get("fields", [])
             st = Struct(n, d, fs, {})
             lines.extend([st.render("RT_SYSTEMC")])
-            if n.endswith("_op_instr_t"):
-                thgen_list.append(Struct(n, d, fs, {}))
         lines.extend(("\n#endif // _%s_\n" % (self.name.upper())).split("\n"))
 
         # Write file
@@ -1233,13 +1233,13 @@ using namespace std;
             ncamel = "".join(w.capitalize() or "_" for w in nsnake.split("_"))
             thname = "test_%s.cpp" % nsnake
 
-            ucpath = os.path.join(self.output_dir, "%s.hpp" % nsnake)
+            ucpath = os.path.join(self.uc_dir, "%s.hpp" % nsnake)
             with open(ucpath, "w") as fout:
                 fout.write(
                     Struct(n, d, fs, {}).render("RT_SYSTEMC_USER_CONTROL")
                 )
 
-            thpath = os.path.join(self.test_dir, thname)
+            thpath = os.path.join(self.uc_test_dir, thname)
             with open(thpath, "w") as fout:
                 fout.write(
                     Struct(n, d, fs, {}).render("RT_SYSTEMC_TEST_HARNESS")
@@ -1316,8 +1316,6 @@ class JSONWriter(object):
         self.output_dir = ensure_output_dir(args.output_dir, "json")
         # TODO: TextIOWrapper is not JSON serializable
         fn = os.path.split(self.filenames[0])[1].split(".")[0]
-        for s in self.printer.structs:
-            print(s)
         # with open("%s_structs.json" % (fn), "w") as fout:
         #     json.dump(fout, self.printer.structs)
         # with open("%s_enums.json" % (fn), "w") as fout:
