@@ -4136,7 +4136,7 @@ public class SystemVerilogDecodeModule extends SystemVerilogModule {
 		// now build case statement by iterating through reg list
 		writeStmt(indentLevel, "");
 		if (mapHasMultipleAddresses()) {
-			writeStmt(indentLevel, "if (pio_read_active || pio_write_active)");
+			writeStmt(indentLevel, "if (r32_state > 2)");
 			indentLevel++;
 			writeStmt(indentLevel, "casez(pio_dec_address_d1)");   // begin case statement
 		}
