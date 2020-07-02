@@ -4135,7 +4135,11 @@ public class SystemVerilogDecodeModule extends SystemVerilogModule {
 
 		// now build case statement by iterating through reg list
 		writeStmt(indentLevel, "");
-		if (mapHasMultipleAddresses()) writeStmt(indentLevel, "casez(pio_dec_address_d1)");   // begin case statement
+		if (mapHasMultipleAddresses()) {
+			writeStmt(indentLevel, "if (pio_read_active || pio_write_active)");
+			indentLevel++;
+			writeStmt(indentLevel, "casez(pio_dec_address_d1)");   // begin case statement
+		}
 		it = decoderList.iterator();
 		while (it.hasNext()) {
 			AddressableInstanceProperties elem = it.next();
