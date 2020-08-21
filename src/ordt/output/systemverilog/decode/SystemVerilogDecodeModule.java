@@ -3300,8 +3300,9 @@ public class SystemVerilogDecodeModule extends SystemVerilogModule {
 		this.addCombinAssign(groupName, "        end");  
 		this.addCombinAssign(groupName, "      end");  
 		this.addCombinAssign(groupName, "      else if (" + writeIn + ") begin");  
-		this.addCombinAssign(groupName, "        if (~" + validWriteCondition + ") " + ackStateNextName + " = " + NACK + ";");  
-		this.addCombinAssign(groupName, "        else if (~" + validSizeCondition + ") " + ackStateNextName + " = " + ACK + ";");  
+		this.addCombinAssign(groupName, "        if (~" + validWriteCondition + ") " + ackStateNextName + " = " + NACK + ";");
+		// Disable wrong size -> ACK
+		// this.addCombinAssign(groupName, "        else if (~" + validSizeCondition + ") " + ackStateNextName + " = " + ACK + ";");  
 		this.addCombinAssign(groupName, "        else begin");  
 		if (writeOut != null) this.addCombinAssign(groupName, "        " + writeOut + " =  1'b1;");  
 		this.addCombinAssign(groupName, "        " + ackStateNextName + " = " + ACK_WAIT + ";");  
