@@ -381,7 +381,7 @@ enum_body
 enum_entry
   : id
     EQ num
-    ( LBRACE (enum_property_assign)* RBRACE )?
+    ( LBRACE (enum_property_assign)* (enum_pipe_stages_assign)* (enum_data_per_cycle_assign)* RBRACE )?
     SEMI
   ;
 
@@ -392,6 +392,12 @@ enum_property_assign
     EQ str
     SEMI
   ;
+
+enum_pipe_stages_assign
+  : ( 'pipe_stages' ) EQ NUM SEMI;
+
+enum_data_per_cycle_assign
+  : ( 'data_per_cycle' ) EQ NUM SEMI;
 
 fragment LETTER : ('a'..'z'|'A'..'Z') ;
 
